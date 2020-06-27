@@ -1,34 +1,38 @@
 /**
  * Created by les on 6/21/20.
  */
+
 const Telegraf = require('telegraf');
-const {Extra, Markup} = Telegraf;
 
-const keyboard = Markup.keyboard([
-  Markup.pollRequestButton('Create poll', 'regular'),
-  Markup.pollRequestButton('Create quiz', 'quiz')
-]);
+const request = require('./poll_request');
+const config = require('./config');
 
-const bot = new Telegraf(process.env.BOT_TOKEN)
+const bot = new Telegraf(process.env.BOT_TOKEN);
 
-bot.on('poll', (ctx) => console.log('Poll update', ctx.poll))
-bot.on('poll_answer', (ctx) => console.log('Poll answer', ctx.pollAnswer))
+async function pollRequest(ctx, index) {
+    const {source, question, options, correct_option_id} = request[index];
+    await ctx.replyWithPhoto({source}, {disable_notification: true});
+    await ctx.replyWithQuiz(question, options, {is_anonymous: false, disable_notification: false, correct_option_id});
+}
 
-bot.start((ctx) => ctx.reply('supported commands: /poll /quiz', Extra.markup(keyboard)))
+bot.start( async botCtx => {
+  let index = 0;
 
-bot.command('poll', (ctx) =>
-  ctx.replyWithPoll(
-    'Your favorite math constant',
-    ['x', 'e', 'π', 'φ', 'γ'],
-    {is_anonymous: false}
-  )
-)
-bot.command('quiz', (ctx) =>
-  ctx.replyWithQuiz(
-    '2b|!2b',
-    ['True', 'False'],
-    {correct_option_id: 0}
-  )
-)
+  await pollRequest(botCtx, index++);
 
-bot.launch()
+  bot.on('poll_answer', async ctx => {
+    console.log(ctx.pollAnswer);
+    await botCtx.reply('Ждем следующего вопроса ...')
+    await new Promise(resolve => setTimeout(() => resolve(), config.pollRequestDelay));
+    await pollRequest(botCtx, index);
+    if (++index === request.length) {
+      index = 0;
+    }
+  });
+})
+
+bot.catch((err, ctx) => {
+  console.log(`Ooops, encountered an error for ${ctx.updateType}`, err)
+})
+
+bot.launch();
