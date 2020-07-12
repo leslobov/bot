@@ -6,6 +6,7 @@ const Telegraf = require('telegraf');
 
 const request = require('./poll_request');
 const config = require('./config');
+const dbActions = require('./db/actions')
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
@@ -21,7 +22,7 @@ bot.start( async botCtx => {
   await pollRequest(botCtx, index++);
 
   bot.on('poll_answer', async ctx => {
-    console.log(ctx.pollAnswer);
+    await dbActions.chat.save({...ctx.pollAnswer, date: new Date, requestIndex: index});
     await botCtx.reply('Ждем следующего вопроса ...')
     await new Promise(resolve => setTimeout(() => resolve(), config.pollRequestDelay));
     await pollRequest(botCtx, index);
