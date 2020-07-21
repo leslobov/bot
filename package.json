@@ -10,6 +10,7 @@
   "license": "ISC",
   "dependencies": {
     "mongodb": "^3.5.9",
+    "mongoose": "^5.9.25",
     "telegraf": "^3.38.0"
   },
   "devDependencies": {
